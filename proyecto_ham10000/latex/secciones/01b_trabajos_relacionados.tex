@@ -1,0 +1,31 @@
+\FloatBarrier\section{Marco referencial y trabajos relacionados}
+
+\subsection{El estándar HAM10000 y el desafío ISIC}
+La publicación de HAM10000 (\textit{Human Against Machine with 10000 training images}) por Tschandl, Rosendahl y Kittler \cite{tschandl2018} y su integración posterior en el desafío ISIC~2018 \cite{codella2019} consolidaron un referente abierto para evaluar clasificadores dermatoscópicos en siete categorías pigmentadas y no pigmentadas. Una característica crítica documentada desde el artículo original es la multiplicidad de tomas por lesión física: distintas magnificaciones, ángulos o dispositivos registran la misma lesión clínica.
+
+Por esta razón, la literatura metodológica advierte que dividir aleatoriamente por imagen produce filtración de información entre entrenamiento y prueba (\textit{data leakage}), generando métricas artificialmente altas que no se sostienen sobre lesiones nuevas. En este proyecto se adopta la agrupación estricta por \texttt{lesion\_id} y huella criptográfica SHA-256 antes de realizar la partición estratificada.
+
+\subsection{Evolución hacia arquitecturas CNN compactas y transferencia}
+En el desarrollo de redes convolucionales \cite{goodfellow2016}, ResNet introdujo conexiones residuales para facilitar la optimización de arquitecturas profundas mediante atajos aditivos de identidad \cite{he2016}. Posteriormente, EfficientNet propuso el escalado compuesto coordinado de profundidad, ancho y resolución de entrada a partir de bloques invertidos \textit{MBConv} con módulos de atención de canales (\textit{Squeeze-and-Excitation}, SE) \cite{tan2019}. En la línea de eficiencia en dispositivos con restricciones de memoria y latencia, MobileNetV3 integró búsqueda neuronal orientada a hardware, convoluciones separables en profundidad, módulos SE y la función de activación \textit{hard-swish} \cite{howard2019}.
+
+Cuando la colección objetivo posee alrededor de $10^4$ imágenes, inicializar desde pesos preentrenados en ImageNet y transferir representaciones visuales acelera la convergencia frente al entrenamiento desde cero, aunque exige adaptar la capa clasificadora y controlar tasas de aprendizaje durante el ajuste fino \cite{pan2010}.
+
+\subsection{Evaluación bajo desbalance extremo y controles del estudio}
+Como demostraron Saito y Rehmsmeier \cite{saito2015}, en colecciones fuertemente desbalanceadas las métricas agregadas tradicionales pueden ocultar fallos graves en categorías minoritarias. En HAM10000, la clase \texttt{nv} concentra dos tercios de los registros mientras que \texttt{df} apenas supera el 1\%. Por ello, el diseño experimental del Grupo N.\ 9 evita depender exclusivamente de \textit{Accuracy} y fija un conjunto de controles explícitos frente a sesgos frecuentes en la literatura académica (Tabla~\ref{tab:estado_arte}).
+
+\begin{table}[htbp]\centering\small
+\caption{Riesgos metodológicos documentados en la literatura y controles adoptados en este proyecto.}
+\label{tab:estado_arte}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{5.5cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Riesgo en literatura} & \textbf{Impacto si no se controla} & \textbf{Control implementado en el estudio} \\ \midrule
+Partición por imagen & Múltiples tomas de una lesión aparecen en train y test, inflando métricas. & \texttt{StratifiedGroupKFold(20)} agrupado por \texttt{lesion\_id} + SHA-256. \\
+Evaluación por Accuracy & Un predictor trivial de \texttt{nv} logra $\approx 67\%$ ignorando clases críticas. & Selección por Macro F1 en \texttt{val} junto a \texttt{Recall mel}, Bal.\ Acc.\ y $\mathrm{AUC}_{\mathrm{OVR}}$. \\
+Aumento antes del split & Copias aumentadas se reparten entre entrenamiento y evaluación. & Aumento determinista en línea aplicado únicamente sobre \texttt{train}. \\
+Deformación por \textit{resize} & El estiramiento $600\times450 \to 224\times224$ distorsiona morfología de bordes. & Adaptación isotrópica \textit{letterbox} bilineal con relleno media ImageNet. \\
+Comparación desigual & Diferente resolución, hardware o split impiden atribuir mejoras a la red. & Receta única en \texttt{configs/base.json}, \texttt{split.csv} fijo y latencia en la misma GPU. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Siguiendo el principio de rigor bibliográfico, en este informe los antecedentes publicados orientan las decisiones metodológicas, pero sus cifras reportadas en otros esquemas de partición o hardware no se trasladan ni se mezclan como resultados propios del equipo.

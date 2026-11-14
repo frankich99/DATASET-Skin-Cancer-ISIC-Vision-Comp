@@ -1,0 +1,44 @@
+\FloatBarrier\section{Evaluación multimétrica y eficiencia}
+
+\subsection{Por qué no basta Accuracy}
+La exactitud global divide aciertos entre muestras y resulta intuitiva, pero oculta fallos sistemáticos en categorías minoritarias. En HAM10000 la clase mayoritaria \texttt{nv} (66.95\%) domina ese promedio. Por ello, \textit{Accuracy} se informa como complemento y no como único criterio de selección. Las métricas se acompañan de su soporte por clase y de la matriz de confusión \cite{sklearn2011}.
+
+\begin{tcolorbox}[teoriaBox,title={Definición de métricas multiclase y balanceo por categoría}]
+Para cada categoría diagnóstica $c \in \{1,\dots,7\}$ evaluada uno contra el resto:
+\begin{align}
+\mathrm{Precision}_c &= \frac{TP_c}{TP_c+FP_c}, &
+\mathrm{Recall}_c &= \frac{TP_c}{TP_c+FN_c}, &
+F1_c &= \frac{2\,\mathrm{Precision}_c\,\mathrm{Recall}_c}{\mathrm{Precision}_c+\mathrm{Recall}_c}.
+\end{align}
+Las métricas agregadas de comparación son el promedio macro de F1 y la exactitud balanceada:
+\begin{equation}
+F1_{\mathrm{macro}}=\frac{1}{7}\sum_{c=1}^{7}F1_c, \qquad
+\mathrm{Bal.\ Acc.}=\frac{1}{7}\sum_{c=1}^{7}\mathrm{Recall}_c.
+\end{equation}
+\end{tcolorbox}
+
+Se adopta una convención explícita para divisiones indefinidas (\texttt{zero\_division=0}) y se informa como \texttt{null} cualquier AUC indefinida por clase ausente en un subconjunto sintético, en lugar de sustituirla por un valor ficticio.
+
+\subsection{Diagnóstico por clase, melanoma y curvas ROC}
+La sensibilidad de melanoma (\texttt{Recall mel}) se informa de manera explícita junto a Macro F1 y \textit{Balanced Accuracy} debido al impacto clínico de falsos negativos en esa categoría. Las matrices de confusión $7\times 7$ revelarán qué pares concentran confusión (por ejemplo, \texttt{mel} frente a \texttt{bkl} o \texttt{nv}). La evaluación ROC utiliza las probabilidades predichas uno contra el resto ($\mathrm{AUC}_{\mathrm{OVR}}$), generando curvas ROC por modelo y comparativas (\texttt{roc\_*.png}, \texttt{roc\_comparativa\_*.png}) junto a gráficos resumen de desempeño y robustez (\texttt{comparacion\_metricas.png}, \texttt{comparacion\_robustez.png}) \cite{saito2015}.
+
+\begin{table}[htbp]\centering\small
+\caption{Marco multimétrico del estudio y justificación de aplicabilidad por tipo de tarea.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{3.9cm}>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Métrica / Indicador} & \textbf{Rol en estudio} & \textbf{Justificación técnica (\texttt{metrics.py} / \texttt{engine.py})} \\ \midrule
+Macro F1 & Criterio primario & Pondera por igual las 7 clases frente al desbalance $58.3:1$. \\
+Balanced Accuracy & Complementaria & Promedio de \textit{recall} por categoría sin sesgo hacia \texttt{nv}. \\
+Recall de melanoma & Prioridad crítica & Cuantifica la tasa de detección en la clase maligna de mayor riesgo. \\
+$\mathrm{AUC}_{\mathrm{OVR}}$ macro & Discriminación & Evalúa separabilidad probabilística global uno contra el resto. \\
+Latencia y VRAM pico & Eficiencia GPU & Mediana/P95 de \texttt{forward()} en \texttt{batch=1} y memoria máxima asignada. \\
+IoU, Dice, mAP & No aplicables & Corresponden a segmentación o detección con máscaras/cajas ausentes aquí. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Medición de latencia, memoria y costo}
+La latencia de inferencia se mide en modo evaluación, sin gradientes y con \texttt{batch=1}, ejecutando diez iteraciones de calentamiento y cincuenta mediciones sincronizadas mediante \texttt{torch.cuda.synchronize()}. Se reporta mediana y percentil 95 (en milisegundos), además de parámetros totales, VRAM máxima asignada y segundos por época. Es importante precisar que este temporizador mide únicamente el paso \texttt{forward()} en GPU sobre el tensor ya transferido, excluyendo lectura en disco, decodificación JPEG, \textit{letterbox}, normalización y cualquier filtrado espacial previo. Asimismo, entre las corridas repetidas del mismo modelo en la estación local se observó dispersión operativa entre ejecuciones ($6.86$--$9.46$~ms en ResNet-18, $22.49$--$34.82$~ms en EfficientNet-B0 y $15.26$--$22.40$~ms en MobileNetV3-Small), por lo que la latencia de \texttt{test\_clean} debe leerse junto a dicho rango observado.
+
+\subsection{Separación estricta entre val y test}
+El conjunto \texttt{val} ($n=1\,503$) guía la selección de checkpoint y decisiones metodológicas. El conjunto \texttt{test} ($n=1\,503$) permanece bloqueado mediante el parámetro obligatorio \texttt{-{}-confirmar-test}, evaluándose una única vez tras congelar los tres mejores checkpoints.

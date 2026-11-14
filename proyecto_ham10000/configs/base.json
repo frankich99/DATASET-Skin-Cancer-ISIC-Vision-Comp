@@ -1,0 +1,16 @@
+{
+  "image_size": 224,
+  "batch_size": 8,
+  "epochs": 20,
+  "head_epochs": 2,
+  "patience": 5,
+  "head_lr": 0.0001,
+  "backbone_lr": 0.00001,
+  "weight_decay": 0.0001,
+  "seed": 42,
+  "num_workers": 4,
+  "amp": false,
+  "pretrained": true,
+  "class_weights": true,
+  "device": "cuda"
+}

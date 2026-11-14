@@ -1,0 +1,41 @@
+\FloatBarrier\section{Arquitecturas seleccionadas y justificación}
+
+\subsection{ResNet-18 como referencia residual}
+ResNet introduce conexiones que suman una transformación aprendida a una ruta de identidad. La formulación básica es $y=F(x)+x$ cuando las dimensiones son compatibles. Si cambian resolución o número de canales, una proyección lineal $W_s x$ ajusta la ruta de atajo. Esta estructura facilita la optimización de redes profundas, pero no significa que toda red más profunda sea mejor para cualquier dataset \cite{he2016}.
+
+ResNet-18 utiliza bloques residuales básicos $3\times 3$ y constituye una referencia ampliamente documentada. En este proyecto interesa porque ofrece una arquitectura suficientemente expresiva sin recurrir de inmediato a una variante mayor. La cabeza original de ImageNet (512 entradas) se reemplaza por una capa lineal de siete salidas, resultando en 11\,180\,103 parámetros reales.
+
+Como hipótesis, la referencia residual puede ofrecer una comparación clara entre capacidad y costo. No se presupone que domine en sensibilidad de melanoma ni en precisión global. La evidencia deberá provenir de la misma partición y receta utilizadas con los otros modelos.
+
+\subsection{EfficientNet-B0 y el equilibrio de recursos}
+EfficientNet estudia cómo escalar de forma coordinada la profundidad ($d=\alpha^\phi$), el ancho ($w=\beta^\phi$) y la resolución ($r=\gamma^\phi$) de una familia de redes mediante un coeficiente compuesto $\phi$. B0 es la referencia base de la familia y utiliza bloques invertidos eficientes (\textit{MBConv}) y mecanismos de atención de canales (\textit{Squeeze-and-Excitation}, SE) \cite{tan2019}.
+
+El proyecto no implementa una búsqueda de nuevas arquitecturas ni compara B0 con toda la familia. Utiliza la implementación oficial de TorchVision con pesos \texttt{IMAGENET1K\_V1} y adapta la capa final de su clasificador (\texttt{1280} a \texttt{7} salidas, manteniendo \texttt{Dropout(0.2)}), sumando 4\,016\,515 parámetros totales. El artículo original informa ventajas de eficiencia bajo sus propias condiciones; esas cifras no se trasladan al proyecto como resultados locales sin medición directa.
+
+\subsection{MobileNetV3-Small y la alternativa compacta}
+MobileNetV3 combina búsqueda orientada al hardware, bloques invertidos con cuello de botella, convoluciones separables en profundidad, módulos SE y activaciones \textit{hard-swish} en capas profundas \cite{howard2019}. Su variante Small adaptada reemplaza la última capa lineal (\texttt{1024} a \texttt{7} salidas, tras la proyección intermedia $576\to 1024$ con \textit{Hardswish} y \textit{Dropout(0.2)}), sumando 1\,525\,031 parámetros.
+
+La convolución separable divide el filtrado espacial por canal y la combinación puntual $1\times 1$. Esto reduce parámetros y operaciones respecto a una convolución convencional. Sin embargo, el acceso a memoria, el tamaño del lote y la implementación del operador influyen en la latencia real sobre GPU. El experimento debe medir tanto el desempeño diagnóstico como la velocidad real en la misma tarjeta gráfica.
+
+\input{tablas/modelos.tex}
+
+\begin{table}[htbp]\centering\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\caption{Comparación estructural de bloques, dimensiones de representación y cabezas adaptadas.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}lccc>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Modelo} & \textbf{Activación} & \textbf{Atención SE} & \makecell{\textbf{Dim.\ entrada}\\\textbf{cabeza}} & \textbf{Capa sustituida en \texttt{models.py}} \\ \midrule
+ResNet-18 & ReLU & No & 512 & \texttt{fc: Linear(512, 7)} \\
+EfficientNet-B0 & SiLU (Swish) & Sí & 1\,280 & \texttt{classifier[-1]: Linear(1280, 7)} \\
+MobileNetV3-Small & ReLU / h-swish & Sí & 1\,024 & \texttt{classifier[-1]: Linear(1024, 7)} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\figura{11_arquitecturas.png}{0.98}{Esquema estructural comparativo de las tres CNN adaptadas. Diagrama conceptual de etapas y dimensiones verificadas en \texttt{models.py}.}
+\FloatBarrier
+
+\subsection{Condiciones para una comparación justa}
+Los tres modelos utilizarán el mismo orden de clases, split, resolución, política de aumento, pérdida, criterio de selección y presupuesto máximo de épocas. Se registran las versiones de los pesos ImageNet, porque ``preentrenado'' no identifica por sí solo una receta. La normalización de canales se mantiene compatible con los pesos, mientras que la geometría común mediante relleno constituye una decisión experimental documentada.
+
+El estudio compara arquitecturas bajo una receta común. No pretende demostrar el óptimo absoluto de cada una, que requeriría búsquedas equivalentes de hiperparámetros y mayor presupuesto. VGG, ResNet-50 o ViT-B/16 no se descartan por ser incorrectos, sino porque no son necesarios para responder la pregunta inicial con cuatro GiB de VRAM. YOLO y U-Net corresponden a otras anotaciones y objetivos; no se incorporan como clasificadores por simple disponibilidad de código.

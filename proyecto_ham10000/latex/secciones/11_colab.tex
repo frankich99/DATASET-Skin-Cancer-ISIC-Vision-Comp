@@ -1,0 +1,42 @@
+\FloatBarrier\section{Cuaderno integrado local y Google Colab}
+
+\subsection{Identidad del estudio y código compartido}
+El cuaderno \texttt{HAM10000\_Grupo09.ipynb} adopta el mismo título que este informe: \textit{Evaluación Comparativa de Tres Arquitecturas CNN para Clasificación de Lesiones Cutáneas Pigmentadas mediante Dermatoscopia (HAM10000)}. HAM10000 identifica el conjunto de imágenes, no una ubicación del estudio ni una herramienta clínica. Se conserva el alcance académico, sin despliegue.
+
+El notebook integra el flujo completo mediante el paquete común \texttt{python/ham10000}, la CLI \texttt{ejecutar.py}, \texttt{configs/base.json} y el manifiesto fijo. No mantiene otra implementación del entrenamiento. Sus 22 celdas cubren controles, inicialización, dependencias, inventario del código, integridad de datos, protocolo, corridas existentes, entrenamiento/reanudación, evaluación, métricas, figuras, discusión, exportación y diagnóstico. \texttt{generar\_notebook.py} permite mantener su fuente revisable; las utilidades de \texttt{runtime.py} se integran en el propio cuaderno.
+
+\subsection{Detección de entorno y resolución del error local}
+La importación incondicional de \texttt{google.colab} produce \texttt{ModuleNotFoundError} al ejecutar un cuaderno de nube desde VS Code o Jupyter ordinario. Instalar ese paquete no habilita el montaje de Drive fuera del backend compatible. La versión corregida detecta el runtime alojado mediante sus variables de entorno y solo importa/monta Drive dentro de esa rama \cite{colabfaq}. Localmente descubre la raíz del proyecto y los originales, o permite indicar rutas explícitas, e imprime \texttt{sys.executable}, rutas y versiones reales. La inspección no exige CUDA; el entrenamiento base sí queda bloqueado si no hay GPU disponible.
+
+\subsection{Paquete portable, extracción e integridad}
+El script \texttt{empaquetar.py} genera \texttt{proyecto\_ham10000\_colab.zip}; informa su tamaño y comprueba CRC. Incluye el paquete Python completo, requisitos CUDA/comunes/Jupyter, configuración, manifiestos, fuentes LaTeX, tablas, figuras, PDF y presentación. También incluye \texttt{resultados/comparacion.csv} como \textbf{referencia del experimento local publicado}; no es evidencia de una ejecución nueva. Excluye imágenes, carpetas exportadas, entorno virtual, checkpoints, \texttt{runs/} y resultados pesados.
+
+En Colab el usuario sube manualmente ese ZIP y \texttt{HAM10000.zip} a \texttt{Mi unidad/Grupo09HAM/}. El cuaderno autoriza Drive, copia y extrae en \texttt{/content/ham10000\_sesion/} para evitar miles de lecturas remotas. Comprueba SHA-256 de las copias y CRC al leer, rechaza rutas inseguras, enlaces, colisiones incompatibles y espacio insuficiente; publica el directorio solo al terminar. Una extracción no acreditada no se sobrescribe. Después verifica el digest canónico de \texttt{split.csv}, los conteos, clases y fugas por lesión/grupo/hash; por defecto también rehashea los 10\,015 originales, sin volver a sortear particiones.
+
+\subsection{Persistencia y controles seguros}
+\texttt{ENTRENAR}, \texttt{EVALUAR}, \texttt{CONFIRMAR\_TEST}, instalación, regeneración de figuras y exportación comienzan desactivados. La configuración de entrenamiento se conserva íntegra, incluido \texttt{num\_workers=4}; ya no se genera automáticamente una variante con dos workers. Reanudar exige arquitectura, configuración completa y split idénticos. Se continúa desde la última época completa de \texttt{last.pt}; una corrida terminada no se reescribe. Para otro protocolo se requiere otro JSON y raíz de runs explícitos, sin mezclarlo con el experimento publicado.
+
+En Colab los checkpoints, historiales y métricas se escriben en Drive; los originales se leen desde el almacenamiento temporal. Al reiniciar se reconstruye \texttt{/content} y se utiliza el mismo protocolo. No se garantizan GPU gratuita, duración de sesión, identidad bit a bit entre dispositivos ni persistencia ante fallos del montaje o almacenamiento.
+
+\begin{table}[htbp]\centering\small
+\caption{Equivalencia del flujo y diferencias operativas entre ejecución local y Colab.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}p{3.5cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Aspecto} & \textbf{Local (VS Code/Jupyter)} & \textbf{Google Colab alojado} \\ \midrule
+Código y protocolo & Paquete común; JSON original & Mismo paquete y JSON desde ZIP \\
+Drive & No se importa ni monta & Montaje autorizado solo en backend compatible \\
+Originales & Disco local, rutas explícitas o descubiertas & Extracción temporal en \texttt{/content} \\
+Partición y workers & Split \texttt{583779fb...}; workers 4 & Mismo split y workers 4 \\
+Persistencia & \texttt{runs/} local & \texttt{Grupo09HAM/runs} en Drive \\
+Resultados nuevos & \texttt{resultados\_notebook/} & Misma carpeta bajo Drive \\
+Evidencia acreditada & Entrenamientos reales y cuaderno en inspección & Rama simulada; no ejecución real acreditada \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Evaluación, resultados e integración documental}
+Con evaluación activada se ejecuta primero \texttt{val\_clean}; solo tras confirmar explícitamente el protocolo se realizan las 21 evaluaciones finales de test (cinco condiciones y dos mitigaciones por CNN). Antes de reutilizar una carpeta, \texttt{artifacts.py} comprueba ambos archivos, procedencia, todas las muestras, etiquetas y probabilidades. Una carpeta incompleta detiene el flujo; no se omite silenciosamente. Las salidas nuevas se publican desde un directorio temporal al completar CSV y JSON. \texttt{-{}-device cpu} y \texttt{-{}-num-workers 0} permiten evaluar un checkpoint CUDA sin editarlo; las mediciones CPU se conservan separadas.
+
+El cuaderno distingue métricas verificadas en los runs de la tabla de referencia local y no fabrica resultados. Expone Macro Precision/F1, exactitud balanceada, Recall de melanoma, AUC, reportes por clase, matrices, robustez, mitigación y eficiencia. Las figuras opcionales se generan a color y 300 DPI en \texttt{resultados\_notebook/}, sin sustituir cifras ni gráficos publicados. La consolidación permite seleccionar subcarpeta y rechaza duplicados o entornos de inferencia mezclados; tiempo y VRAM de entrenamiento requieren revisar además las sesiones registradas.
+
+La exportación opcional conserva CSV/JSON, configuración, split y figuras con un manifiesto de procedencia y SHA-256; no incluye imágenes ni checkpoints. Actualizar informe, artículo y exposición con un estudio nuevo exige revisar deliberadamente evidencias y textos, compilar y solo después empaquetar. Se verificaron esquema nbformat, sintaxis, regresiones y ejecución local del cuaderno en modo de inspección, con artefactos experimentales sin cambios. La rama Colab se simuló sin autenticación externa: \textbf{no se acredita ejecución en una cuenta real de Google Colab}. Todas las métricas publicadas siguen correspondiendo a la GTX~1650 local.

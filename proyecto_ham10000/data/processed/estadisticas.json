@@ -1,0 +1,80 @@
+{
+  "tamano_imagen": 224,
+  "calidad_jpeg": 95,
+  "clases": [
+    "akiec",
+    "bcc",
+    "bkl",
+    "df",
+    "mel",
+    "nv",
+    "vasc"
+  ],
+  "media_rgb_train": [
+    0.693823,
+    0.523161,
+    0.52989
+  ],
+  "desviacion_rgb_train": [
+    0.170584,
+    0.136846,
+    0.162109
+  ],
+  "normalizacion_modelo_imagenet": {
+    "media": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "desviacion": [
+      0.229,
+      0.224,
+      0.225
+    ]
+  },
+  "pesos_clase_train": {
+    "akiec": 4.3916,
+    "bcc": 2.7891,
+    "bkl": 1.3021,
+    "df": 12.5161,
+    "mel": 1.2853,
+    "nv": 0.2133,
+    "vasc": 10.0129
+  },
+  "conteos_split": {
+    "train": 7009,
+    "val": 1503,
+    "test": 1503
+  },
+  "conteos_por_clase": {
+    "train": {
+      "akiec": 228,
+      "bcc": 359,
+      "bkl": 769,
+      "df": 80,
+      "mel": 779,
+      "nv": 4694,
+      "vasc": 100
+    },
+    "val": {
+      "akiec": 50,
+      "bcc": 77,
+      "bkl": 165,
+      "df": 18,
+      "mel": 166,
+      "nv": 1006,
+      "vasc": 21
+    },
+    "test": {
+      "akiec": 49,
+      "bcc": 78,
+      "bkl": 165,
+      "df": 17,
+      "mel": 168,
+      "nv": 1005,
+      "vasc": 21
+    }
+  },
+  "split_sha256": "583779fb75f28758f49b555898d1a7b50fc466574e63dc207c61e644f944ba39",
+  "semilla": 42
+}

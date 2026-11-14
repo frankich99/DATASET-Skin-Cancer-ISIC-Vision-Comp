@@ -1,0 +1,43 @@
+\FloatBarrier\section{Trazabilidad, criterios de aceptación y glosario}
+
+\subsection{Correspondencia entre requerimientos y artefactos}
+{\small\setlength{\tabcolsep}{6pt}\renewcommand{\arraystretch}{1.1}
+\begin{longtable}{@{}>{\bfseries\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{8.0cm}>{\raggedright\arraybackslash}p{3.4cm}@{}}
+\caption{Matriz de trazabilidad entre requisitos docentes y artefactos del proyecto.}\\
+\toprule
+\textbf{Requerimiento} & \textbf{Artefacto verificable} & \textbf{Estado} \\ \midrule\endfirsthead
+\toprule
+\textbf{Requerimiento} & \textbf{Artefacto verificable} & \textbf{Estado} \\ \midrule\endhead
+Tres arquitecturas CNN & Módulo \texttt{models.py} y \texttt{configs/base.json} (\texttt{num\_workers=4}) & Completado \\
+Ingesta y auditoría & \texttt{auditoria.json}, SHA-256 y barrido $\mathrm{RMSE}$ (comprobación puntual de sesión; limitación perceptual vigente) & Ejecutado \\
+Partición sin fuga & \texttt{split.csv} (\texttt{583779fb...}) y carpetas \texttt{train/val/test} & Ejecutado \\
+Preprocesamiento & \texttt{data.py}, \texttt{estadisticas.json} y mosaicos & Ejecutado \\
+Piloto y pruebas unitarias & Comprobación puntual de sesión (\texttt{num\_workers=0/4}) sin reporte independiente; 22/22 pruebas del pipeline/cuaderno + 4 de descarga & Ejecutado \\
+Entrenamiento comparativo & 3 corridas completas (\texttt{best.pt}/\texttt{last.pt}, \texttt{history.csv}, \texttt{curvas\_*.png}) & Completado \\
+Evaluación multimétrica & 3 \texttt{val} + 3 \texttt{test\_clean}, \texttt{comparacion.csv}, matrices, curvas ROC (\texttt{roc\_*.png}, \texttt{roc\_comparativa\_test\_clean.png}) y \texttt{comparacion\_metricas.png} & Ejecutado \\
+Robustez al ruido & 18 corridas perturbadas en \texttt{test} (4 perturbaciones base + \texttt{median\_3}/\texttt{gaussian\_1} por modelo) y \texttt{comparacion\_robustez.png} & Ejecutado \\
+Eficiencia GPU & Latencia \texttt{forward()} \texttt{batch=1} (mediana/P95), VRAM pico y s/época en GTX~1650 & Ejecutado \\
+Artículo científico IEEE & \texttt{latex/paper\_ieee.pdf} (8 págs.\ \texttt{IEEEtran}) & Completado \\
+Informe ampliado & \texttt{latex/main.pdf} (resultados reales, Precision por clase y discusión integrados) & Completado \\
+Exposición 10 min & Diapositivas en carpeta \texttt{presentacion/} & Completado \\
+Cuaderno integrado & Mismo título, paquete y split; ejecución local de inspección, rama Colab simulada; nube real no acreditada & Verificado localmente \\
+Despliegue funcional & Excluido del alcance por indicación docente & Excluido (no requerido) \\
+\bottomrule
+\end{longtable}
+}
+
+\subsection{Listas de comprobación y glosario}
+{\small\setlength{\parskip}{3pt}
+Lista de comprobación verificada: intérprete \texttt{.venv}, GPU GTX~1650 (driver 621.01, PyTorch \texttt{2.11.0+cu128}), piloto puntual de equivalencia bit-exacta de workers 4 frente a 0 (sin reporte independiente), manifiesto fijo y esquema/sintaxis del notebook. La revisión del cuaderno ejecutó sus 11 celdas de código localmente, verificó los hashes de 10\,015 originales y conservó sin cambios 61 artefactos experimentales; probó además la rama Colab mediante simulación, no una cuenta externa. Antes del test experimental se congelaron los tres checkpoints seleccionados en \texttt{val} y las cinco condiciones más mitigaciones (21 evaluaciones test). No se relanzaron entrenamientos HAM10000 al revisar el notebook.
+
+\begin{description}[leftmargin=1.4em,itemsep=1pt,topsep=3pt]
+\item[Split:] asignación de muestras a \texttt{train}, \texttt{val} y \texttt{test} agrupada por \texttt{lesion\_id} y SHA-256.
+\item[Macro F1:] promedio no ponderado de $F1_c$ sobre las siete clases diagnósticas.
+\item[Leakage:] filtración de información correlacionada entre entrenamiento y evaluación.
+\item[Transfer learning:] adaptación de pesos preentrenados ImageNet mediante congelamiento inicial de extractor y ajuste fino diferencial.
+\item[VRAM:] memoria gráfica dedicada de la GPU (4~GiB en GTX 1650), distinta de la RAM del sistema.
+\end{description}
+
+\subsection{Responsabilidad académica del Grupo N.\ 9}
+Los integrantes consignados (Choquenaira Quispe, Noe Franklin -- 133962; Porroa Sivana, Yeni Ruth -- 120893; Colque Galindo, Jean Franco -- 193109) asumen la revisión conjunta de método, código, tablas comparativas, resultados experimentales reales y conclusiones tras completar íntegramente el protocolo experimental.
+}

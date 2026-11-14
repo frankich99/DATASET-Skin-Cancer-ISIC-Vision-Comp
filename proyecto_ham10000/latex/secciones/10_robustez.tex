@@ -1,0 +1,37 @@
+\FloatBarrier\section{Robustez, ruido y sensibilidad experimental}
+
+\subsection{Qué significa robustez en este proyecto}
+La robustez se entiende como estabilidad del desempeño frente a perturbaciones acotadas de calidad de imagen sin alterar la etiqueta real. No equivale a seguridad adversarial ni generalización garantizada a cualquier dispositivo fotográfico. La guía docente solicita estudiar sensibilidad ante degradaciones; en clasificación, esto se operacionaliza mediante ruido gaussiano y desenfoque aplicados de forma uniforme.
+
+\subsection{Condiciones predefinidas}
+Se establecen cinco condiciones deterministas aplicadas después de la adaptación geométrica $224\times224$ y antes de la normalización a tensores: referencia limpia, ruido gaussiano aditivo ($\sigma=0.02$ y $\sigma=0.05$ sobre intensidades en $[0,1]$ con recorte válido) y desenfoque gaussiano (radios 1 y 2 píxeles).
+
+\begin{table}[htbp]\centering\small
+\caption{Condiciones deterministas de robustez comunes a las tres arquitecturas (\texttt{data.py}).}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily}p{2.4cm}p{4.3cm}p{2.9cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\textrm{Código}} & \textbf{Transformación} & \textbf{Intensidad} & \textbf{Control de reproducibilidad} \\ \midrule
+clean & Ninguna perturbación adicional & Referencia base & Imagen \textit{letterbox} $224\times224$ intacta. \\
+noise\_002 & Ruido gaussiano aditivo & $\sigma=0.02$ & Semilla SHA-256(\texttt{seed:image\_id:cond}); recorte $[0,1]$. \\
+noise\_005 & Ruido gaussiano aditivo & $\sigma=0.05$ & Semilla SHA-256(\texttt{seed:image\_id:cond}); recorte $[0,1]$. \\
+blur\_1 & Desenfoque gaussiano & Radio 1 píxel & Filtro \texttt{GaussianBlur} ($r=1$) en Pillow. \\
+blur\_2 & Desenfoque gaussiano & Radio 2 píxeles & Filtro \texttt{GaussianBlur} ($r=2$) en Pillow. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La semilla de ruido se calcula con SHA-256 a partir de $(\text{semilla}, \texttt{image\_id}, \text{condición})$, asegurando que ResNet-18, EfficientNet-B0 y MobileNetV3-Small reciban exactamente la misma perturbación en cada muestra.
+
+\figura{09_robustez.png}{1.0}{Ilustración de las cinco condiciones deterministas de robustez sobre una imagen de \texttt{train}. Describe el protocolo; no representa desempeño predictivo.}
+
+\subsection{Cuantificación de la degradación y límites}
+Para cada condición se miden las mismas métricas del test limpio y se cuantifica la caída mediante:
+\begin{equation}
+\Delta F1 = F1_{\mathrm{macro,limpio}} - F1_{\mathrm{macro,perturbado}}, \qquad
+\Delta \mathrm{Recall}_{\mathrm{mel}} = \mathrm{Recall}_{\mathrm{mel,limpio}} - \mathrm{Recall}_{\mathrm{mel,perturbado}}.
+\end{equation}
+Una caída pequeña debe interpretarse junto al desempeño inicial limpio: un modelo con baja precisión base no es superior únicamente por degradarse menos. Las clases minoritarias en test (\texttt{df} con 17 casos y \texttt{vasc} con 21) presentan sensibilidad discreta ante variaciones de pocas predicciones.
+
+\subsection{Mitigación previa mediante filtrado espacial}
+Como extensión determinista del análisis sobre ruido aditivo, \texttt{ejecutar.py evaluar} incorpora el parámetro \texttt{-{}-mitigacion \{none, median\_3, gaussian\_1\}}. Cuando se evalúa una condición ruidosa (en particular \texttt{noise\_005}), la mitigación aplica un filtro espacial sobre la imagen perturbada justo antes de la conversión a tensor y normalización ImageNet: \texttt{median\_3} emplea un filtro de mediana $3\times 3$ (\texttt{ImageFilter.MedianFilter(3)}) para atenuar picos impulsivos de alta frecuencia conservando transiciones de borde, mientras que \texttt{gaussian\_1} aplica suavizado gaussiano con radio $r=1.0$ (\texttt{ImageFilter.GaussianBlur(1.0)}) para reducir varianza aditiva a costa de un ligero alisado de textura. Con \texttt{none} (valor por defecto) se preservan intactas las cinco condiciones base en \texttt{\{split\}\_\{condicion\}}, mientras que las corridas mitigadas se almacenan por separado en \texttt{\{split\}\_\{condicion\}\_\{mitigacion\}} (por ejemplo, \texttt{test\_noise\_005\_median\_3} y \texttt{test\_noise\_005\_gaussian\_1}) sin colisión de directorios. Finalmente, \texttt{ejecutar.py comparar} consolida la trayectoria de sensibilidad y recuperación en \texttt{comparacion\_robustez.png}.
+\FloatBarrier

@@ -1,0 +1,25 @@
+\FloatBarrier\section{Discusión y limitaciones del estudio}
+
+\subsection{Validez interna}
+El diseño reduce fuentes conocidas de optimismo metodológico: separación por lesión, agrupamiento de duplicados binarios, comprobación de casi-duplicados entre lesiones distintas, aumento restringido a entrenamiento y selección mediante validación. La configuración común (\texttt{configs/base.json}, \texttt{num\_workers=4} comprobado bit-exacto en sesión piloto puntual, \texttt{seed=42}) controla diferencias ajenas a la arquitectura y el registro completo de versiones y semillas en \texttt{run.json} garantiza trazabilidad tras completar los 3 entrenamientos, las 3 validaciones y las 21 pruebas en \texttt{test}.
+
+Estas protecciones no eliminan todos los sesgos. Una receta compartida puede favorecer más a una arquitectura que a otra y no representa necesariamente su óptimo particular tras una búsqueda extensiva de hiperparámetros. Asimismo, los experimentos se ejecutaron con una sola semilla (\texttt{seed=42}) por restricciones de tiempo de cómputo local en FP32, por lo que no se reporta desviación estándar entre múltiples inicializaciones; adicionalmente, la pequeña diferencia observada en Macro~F1 entre ResNet-18 y EfficientNet-B0 ($0.00084$) presenta un intervalo de confianza amplio en \textit{bootstrap} pareado por grupo ($[-0.0429, +0.0464]$). Además, las implementaciones de operadores pueden variar entre entornos de ejecución.
+
+\subsection{Validez externa y uso clínico}
+Un test interno procede de la misma colección general y no demuestra rendimiento en otro centro o cámara. La ausencia de \texttt{patient\_id} impide garantizar independencia estricta entre pacientes distintos y la falta de anotaciones completas de fototipo limita análisis de equidad. El sistema desarrollado es estrictamente académico y no reemplaza dermatoscopia clínica, biopsia ni criterio médico profesional.
+
+\begin{table}[htbp]\centering\small
+\caption{Síntesis de amenazas a la validez experimental y medidas de mitigación aplicadas.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{5.8cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Dimensión} & \textbf{Limitación persistente} & \textbf{Mitigación aplicada en el protocolo} \\ \midrule
+Validez interna & Ausencia de \texttt{patient\_id}; dos lesiones de un mismo paciente podrían separarse. & Agrupamiento estricto por \texttt{lesion\_id} + SHA-256 y comprobación de casi-duplicados. \\
+Validez externa & Colección austríaca/australiana con sesgo hacia piel clara y pocos dispositivos. & Declaración explícita de alcance académico; prohibición de uso clínico. \\
+Validez de constructo & Receta única (\texttt{base.json}, \texttt{seed=42}) frente a ajuste fino exhaustivo por arquitectura y multisenilla. & Presupuesto, partición y semilla idénticos; \texttt{test} congelado tras seleccionar en \texttt{val}. \\
+Varianza discreta & Clases escasas en \texttt{test} (\texttt{df}: 17, \texttt{vasc}: 21 muestras) y diferencia no concluyente entre dos modelos. & Reporte de Precision, Recall, F1, AUC, matrices de confusión y \textit{bootstrap} pareado por \texttt{group\_id}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Reproducibilidad y alcance excluido}
+El grupo conserva los CSV de partición, configuraciones, historiales, checkpoints, predicciones y gráficos reales generados en \texttt{runs/} y \texttt{resultados/}, citando todas las fuentes primarias. El despliegue interactivo (web o móvil) quedó explícitamente excluido del alcance del proyecto por indicación docente, de modo que no forma parte de los entregables finales; las diapositivas de exposición de diez minutos residen en \texttt{presentacion/}.

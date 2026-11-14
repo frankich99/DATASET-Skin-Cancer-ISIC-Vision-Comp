@@ -1,0 +1,35 @@
+\FloatBarrier\section{Entorno local, instalación y comprobación de GPU}
+
+\subsection{Hardware disponible}
+La laptop inspeccionada es una Acer Nitro AN515-45 con procesador AMD Ryzen 5 5600H, seis núcleos y doce hilos, aproximadamente 24~GB de memoria instalada y GPU NVIDIA GeForce GTX 1650 de cuatro GiB. También dispone de gráficos integrados AMD. La presencia de dos adaptadores no indica un fallo; en una laptop híbrida cumplen funciones distintas.
+
+La RAM del sistema y la VRAM no son intercambiables a efectos de capacidad de un lote de entrenamiento. La memoria debe medirse en el dispositivo gráfico realmente utilizado. Por ese motivo se comienza con batch pequeño y resolución moderada, ejecutando un piloto antes de fijar los tiempos finales.
+
+\subsection{Diagnóstico inicial y corrección}
+La inspección inicial encontró PyTorch \texttt{2.15.0+cpu} en el Python global de Laragon. Esa distribución no incluía CUDA, aunque la GPU estaba reconocida y el controlador podía inicializarse. Se comprobó el instalador Notebook 621.01 en la página oficial de NVIDIA \cite{nvidiadriver,acerdrivers}, verificando firma e integridad frente al paquete oficial. Tras su instalación, el controlador confirmó versión 621.01 e inicialización CUDA correcta.
+
+\subsection{Entorno aislado del proyecto}
+Se creó un entorno virtual \texttt{.venv} independiente del Python global. Se instalaron las bibliotecas con CUDA: PyTorch versión \texttt{2.11.0+cu128} y torchvision versión \texttt{0.26.0+cu128}. El soporte compilado incluye la arquitectura \texttt{sm\_75} de la GTX 1650. La descarga inicial fue de aproximadamente 2.79~GB decimales e incluye bibliotecas de ejecución, sin requerir instalación separada del CUDA Toolkit completo.
+
+El paquete portable conserva \texttt{python/requirements-cuda.txt}, \texttt{requirements-common.txt} y requisitos opcionales de notebook. El kernel local debe apuntar al intérprete del entorno correcto; el cuaderno imprime su ruta antes de importar dependencias. En Colab se conserva el PyTorch compatible del runtime y se registran sus versiones, sin instalar la wheel de Windows ni su controlador.
+
+\begin{table}[htbp]\centering\small
+\caption{Entorno de cómputo y verificaciones locales efectivamente observadas.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{4.8cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Elemento del entorno} & \textbf{Estado verificado localmente} \\ \midrule
+Equipo y CPU & Laptop Acer Nitro AN515-45, AMD Ryzen 5 5600H (6 núcleos / 12 hilos), 24~GB RAM \\
+Sistema operativo & Windows 11 Pro de 64 bits \\
+Controlador NVIDIA & Versión 621.01 WHQL (firma e integridad verificadas) \\
+GPU dedicada & NVIDIA GeForce GTX 1650, capacidad de cómputo 7.5 (\texttt{sm\_75}), 4\,096 MiB VRAM \\
+Intérprete aislado & Python 3.12.8 en \texttt{.venv} (sin alterar el Python global de Laragon) \\
+PyTorch / torchvision & \texttt{2.11.0+cu128} / \texttt{0.26.0+cu128} \\
+Prueba matricial CUDA & Multiplicación tensorial ejecutada y verificada en \texttt{cuda:0} \\
+Tres CNN, batch 2, 224 px & \textit{Forward/backward} sintético OK: 147 / 208 / 58 MiB de pico asignado \\
+Integridad de paquetes & \texttt{pip check}: sin dependencias rotas ni conflictos \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Alcance de la prueba sintética y uso del intérprete}
+La prueba sintética implementada en \texttt{verificar\_gpu.py} ejecutó las tres arquitecturas con siete salidas usando tensores aleatorios, sin leer HAM10000 ni descargar pesos ImageNet. Todos los comandos locales del proyecto deben ejecutarse mediante \texttt{.venv/Scripts/python.exe}. En Colab se emplea el entorno Linux asignado y se registran sus versiones reales por sesión dentro de \texttt{run.json}.

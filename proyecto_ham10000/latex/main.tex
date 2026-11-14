@@ -1,0 +1,299 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla,es-nodecimaldot,es-lcroman]{babel}
+
+% =========================================================================
+% TIPOGRAFÍA Y MICROTIPOGRAFÍA
+% =========================================================================
+\usepackage{lmodern}
+\AtBeginDocument{\DeclareFontShape{T1}{lmr}{bx}{sc}{<->ssub*lmr/bx/n}{}}
+\usepackage{microtype}
+\usepackage{amsmath,mathtools}
+\usepackage[top=2.1cm, bottom=2.1cm, left=2.1cm, right=2.1cm]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx,booktabs,longtable,array,tabularx,makecell}
+\usepackage{enumitem}
+\usepackage{float,placeins,setspace}
+\usepackage[font=small,labelfont={bf},skip=6pt]{caption}
+\usepackage{titlesec}
+\usepackage[titles]{tocloft}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+% =========================================================================
+% ESTILO EDITORIAL MONOCROMÁTICO SOBRIO (NEGRO, BLANCO Y GRISES NEUTROS)
+% =========================================================================
+\setstretch{1.15}
+\setlength{\emergencystretch}{2em}
+\setlength{\parskip}{5pt}
+\setlength{\headheight}{23pt}
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{7pt}
+\graphicspath{{img/}}
+
+\hypersetup{
+  hidelinks,
+  colorlinks=false,
+  pdfauthor={Grupo 9 - UNSAAC},
+  pdftitle={Evaluación Comparativa de Tres Arquitecturas CNN para Clasificación de Lesiones Cutáneas Pigmentadas mediante Dermatoscopia (HAM10000)}
+}
+
+% =========================================================================
+% ENCABEZADO Y PIE DE PÁGINA
+% =========================================================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textbf{UNSAAC} \textcolor{black!75}{-- Visión por Computador (2026-II)}}
+\fancyhead[R]{\small\textcolor{black!75}{Grupo N.\ 9 $\cdot$ Clasificación Dermatoscópica (HAM10000)}}
+\fancyfoot[L]{\footnotesize\textcolor{black!75}{Informe Técnico Científico}}
+\fancyfoot[R]{\small\textbf{\thepage}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{black}\leaders\hrule height \headrulewidth\hfill}}
+\renewcommand{\footrule}{\hbox to\headwidth{\color{black!25}\leaders\hrule height \footrulewidth\hfill}}
+
+% =========================================================================
+% JERARQUÍA DE TÍTULOS
+% =========================================================================
+\titleformat{\section}
+  {\Large\bfseries\color{black}}
+  {\thesection.}{0.55em}{}[\vspace{3pt}{\color{black}\titlerule[0.8pt]}]
+\titleformat{\subsection}
+  {\large\bfseries\color{black}}
+  {\thesubsection}{0.55em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{black!75}}
+  {\thesubsubsection}{0.55em}{}
+\titlespacing*{\section}{0pt}{16pt}{7pt}
+\titlespacing*{\subsection}{0pt}{11pt}{4pt}
+\titlespacing*{\subsubsection}{0pt}{8pt}{3pt}
+
+% =========================================================================
+% ÍNDICES COMPACTOS Y LEGIBLES (CORRIGE SOLAPE EN SECCIONES >= 10)
+% =========================================================================
+\setlength{\cftbeforesecskip}{2.2pt}
+\setlength{\cftbeforesubsecskip}{0pt}
+\setlength{\cftsecnumwidth}{2.2em}
+\setlength{\cftsubsecindent}{2.0em}
+\setlength{\cftsubsecnumwidth}{2.8em}
+\renewcommand{\cftsecfont}{\bfseries\small\color{black}}
+\renewcommand{\cftsecpagefont}{\bfseries\small\color{black}}
+\renewcommand{\cftsubsecfont}{\footnotesize\color{black}}
+\renewcommand{\cftsubsecpagefont}{\footnotesize\color{black!75}}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+
+\setlength{\cftbeforefigskip}{5pt}
+\setlength{\cftbeforetabskip}{3pt}
+\setlength{\cftfignumwidth}{2.4em}
+\setlength{\cfttabnumwidth}{2.4em}
+\renewcommand{\cftfigfont}{\small}
+\renewcommand{\cfttabfont}{\small}
+\renewcommand{\cftfigpagefont}{\small\bfseries\color{black}}
+\renewcommand{\cfttabpagefont}{\small\bfseries\color{black}}
+
+% =========================================================================
+% CAJAS ACADÉMICAS Y LISTADOS DE CÓDIGO
+% =========================================================================
+\tcbset{
+  teoriaBox/.style={
+    enhanced, colback=black!5, colframe=black, colbacktitle=black!10, coltitle=black,
+    fonttitle=\bfseries\small, arc=2pt, boxrule=0.5pt, leftrule=2.5pt,
+    breakable, top=6pt, bottom=6pt, left=8pt, right=8pt
+  },
+  notaBox/.style={
+    enhanced, colback=black!5, colframe=black, colbacktitle=black!75, coltitle=white,
+    fonttitle=\bfseries\small, arc=2pt, boxrule=0.5pt, leftrule=2.5pt,
+    breakable, top=6pt, bottom=6pt, left=8pt, right=8pt
+  },
+  resBox/.style={
+    enhanced, colback=white, colframe=black!75, colbacktitle=black!10, coltitle=black,
+    fonttitle=\bfseries\small, arc=2pt, boxrule=0.5pt, leftrule=2.5pt,
+    breakable, top=6pt, bottom=6pt, left=8pt, right=8pt
+  }
+}
+
+\lstset{
+  backgroundcolor=\color{black!5},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  rulecolor=\color{black!25},
+  numbers=left,
+  numberstyle=\tiny\color{black!75},
+  numbersep=7pt,
+  commentstyle=\itshape\color{black!75},
+  keywordstyle=\bfseries\color{black},
+  stringstyle=\color{black},
+  showstringspaces=false,
+  keepspaces=true,
+  extendedchars=true,
+  xleftmargin=1.5em,
+  framexleftmargin=1.2em,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1
+}
+
+\newcommand{\pendiente}{\textbf{\textcolor{black!75}{Pendiente}}}
+\newcommand{\figura}[3]{%
+  \begin{figure}[htbp]%
+    \centering%
+    \includegraphics[width=#2\textwidth]{#1}%
+    \caption{#3}%
+  \end{figure}%
+}
+\newcommand{\estado}{%
+\begin{tcolorbox}[notaBox,title={Estado verificado de la investigación}]
+\textbf{Completado y comprobado:} auditoría integral de 10\,015 imágenes (7\,470 lesiones), partición fija sin fuga entre lesiones ni duplicados (\texttt{split\_sha256: 583779fb...}), exportación \texttt{train/val/test}, entorno GPU GTX~1650 (PyTorch 2.11.0+cu128, FP32, \texttt{batch=8}, \texttt{num\_workers=4}, semilla 42), \textbf{3 entrenamientos completos}, \textbf{3 validaciones} y \textbf{21 pruebas en \texttt{test}} (5 condiciones más 2 mitigaciones por CNN), consolidación comparativa y artículo IEEE. La revisión incluye \textbf{22/22 pruebas automáticas} del pipeline/cuaderno (más 4 de descarga), cuaderno integrado local/Colab ejecutado localmente en modo de inspección y rama de nube simulada, \textbf{sin ejecución real acreditada en Colab}.\\[4pt]
+\textbf{Síntesis académica:} Bajo este protocolo y hardware (GTX~1650, FP32, semilla 42), \textbf{ResNet-18} ofrece el mejor compromiso observado desempeño--latencia (\textbf{Macro F1 = 0.6786}, Macro Prec.\ = 0.6591, \textit{Balanced Accuracy} = 0.7174, $\mathrm{AUC}_{\mathrm{OVR}}=0.9596$, latencia mediana \texttt{forward()} de \textbf{7.22~ms}, 434.2~MiB VRAM). Su diferencia de 0.00084 en Macro~F1 frente a EfficientNet-B0 (0.6778, Macro Prec.\ = 0.6741, mayor sensibilidad limpia en melanoma con 0.6607 pero 24.60~ms y mayor caída bajo ruido) no demuestra superioridad estadística ni equivalencia (bootstrap pareado por 1\,118 \texttt{group\_id}: IC95\% $[-0.0429, +0.0464]$). MobileNetV3-Small minimiza VRAM (211.8~MiB) con menor Macro~F1 (0.5700). Este informe es estrictamente académico y \textbf{no constituye diagnóstico clínico}.
+\end{tcolorbox}}
+
+\begin{document}
+
+% ==============================================================================
+% PORTADA INSTITUCIONAL UNSAAC
+% ==============================================================================
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+\centering
+\vspace*{-0.8cm}
+
+{\large\bfseries UNIVERSIDAD NACIONAL DE SAN ANTONIO ABAD DEL CUSCO\par}
+\vspace{0.14cm}
+{\normalsize\bfseries FACULTAD DE INGENIERÍA ELÉCTRICA, ELECTRÓNICA, INFORMÁTICA Y MECÁNICA\par}
+\vspace{0.10cm}
+{\normalsize\bfseries ESCUELA PROFESIONAL DE INGENIERÍA INFORMÁTICA Y DE SISTEMAS\par}
+
+\vspace{0.35cm}
+\includegraphics[height=4.2cm]{escudo.png}\par
+\vspace{0.35cm}
+
+{\footnotesize\bfseries\color{black!70} INFORME DE INVESTIGACIÓN CIENTÍFICA $\cdot$ REDES NEURONALES CONVOLUCIONALES (CNN)\par}
+\vspace{0.16cm}
+
+\begin{tcolorbox}[enhanced,colback=black!4,colframe=black,arc=3pt,boxrule=1pt,top=7pt,bottom=7pt,left=10pt,right=10pt]
+\centering
+{\Large\bfseries\color{black} EVALUACIÓN COMPARATIVA DE TRES ARQUITECTURAS CNN PARA CLASIFICACIÓN DE LESIONES CUTÁNEAS PIGMENTADAS MEDIANTE DERMATOSCOPIA (HAM10000)\par}
+\vspace{0.16cm}
+{\small\color{black!75} Evaluación Multimétrica, Robustez ante Perturbaciones de Imagen y Eficiencia Computacional en GPU\par}
+\end{tcolorbox}
+
+\vspace{0.32cm}
+\begin{flushleft}
+\small
+\renewcommand{\arraystretch}{1.18}
+\begin{tabularx}{\textwidth}{@{}p{4.3cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\multicolumn{2}{l}{\textbf{Datos Académicos del Proyecto}} \\ \midrule
+\textbf{Asignatura:} & Visión por Computador (Semestre Académico 2026-II) \\
+\textbf{Docente evaluador:} & Mg.\ Hans Harley Ccacyahuillca Bejar \\
+\textbf{Equipo de trabajo:} & Grupo N.\ 9 \\
+\textbf{Presentado por:} & Choquenaira Quispe, Noe Franklin \hfill \texttt{Código: 133962} \\
+                         & Porroa Sivana, Yeni Ruth \hfill \texttt{Código: 120893} \\
+                         & Colque Galindo, Jean Franco \hfill \texttt{Código: 193109} \\
+\midrule
+\multicolumn{2}{l}{\textbf{Ficha Técnica de la Investigación}} \\ \midrule
+\textbf{Dataset y modalidad:} & HAM10000 (10\,015 imágenes dermatoscópicas, 7 categorías diagnósticas) \\
+\textbf{Arquitecturas evaluadas:} & ResNet-18, EfficientNet-B0 y MobileNetV3-Small (\texttt{IMAGENET1K\_V1}) \\
+\textbf{Protocolo y partición:} & Partición fija por lesión y SHA-256 (\texttt{StratifiedGroupKFold}, $K=20$, 0 fugas) \\
+\bottomrule
+\end{tabularx}
+\end{flushleft}
+
+\vfill
+{\normalsize\bfseries Cusco -- Perú\par}
+\vspace{0.06cm}
+{\normalsize\bfseries 2026\par}
+\end{titlepage}
+\hypersetup{pageanchor=true}
+
+% ==============================================================================
+% RESUMEN EJECUTIVO Y MAPA DEL INFORME
+% ==============================================================================
+\pagenumbering{roman}
+\section*{Resumen Ejecutivo y Alcance del Informe}
+\addcontentsline{toc}{section}{Resumen Ejecutivo y Alcance del Informe}
+
+Se formula e implementa un protocolo experimental reproducible para comparar tres arquitecturas convolucionales compactas---\textbf{ResNet-18}, \textbf{EfficientNet-B0} y \textbf{MobileNetV3-Small}---mediante transferencia de aprendizaje en la clasificación multiclase de siete categorías dermatoscópicas del conjunto \textbf{HAM10000}. La comparación estudia el equilibrio entre desempeño por clase (priorizando Macro F1 y sensibilidad de melanoma), estabilidad frente a perturbaciones predefinidas y eficiencia computacional en GPU de recursos limitados (NVIDIA GTX 1650 de 4~GiB) junto a respaldo portátil en Google Colab.
+
+La auditoría local verifica 10\,015 registros e imágenes correspondientes a 7\,470 lesiones únicas. Se identifican dos pares con huella SHA-256 idéntica y, en comprobación puntual de sesión sin reporte independiente persistido, se descartaron casi-duplicados directos entre lesiones distintas ($\mathrm{RMSE}<4.5$ en miniaturas $16\times 12$). Mediante \texttt{StratifiedGroupKFold} ($K=20$) se obtiene una partición fija libre de fuga con 7\,009 imágenes en \texttt{train}, 1\,503 en \texttt{val} y 1\,503 en \texttt{test}, exportada también por carpetas de clase junto a \texttt{estadisticas.json} y \texttt{dataset\_procesado.csv}.
+
+\estado
+
+\noindent\textbf{Palabras clave:} HAM10000, CNN, ResNet-18, EfficientNet-B0, MobileNetV3-Small, transferencia de aprendizaje, partición por lesión, reproducibilidad.
+
+\subsection*{Estructura del Informe y Correspondencia con el Artículo IEEE}
+Para satisfacer simultáneamente el artículo IEEE exigido y la documentación técnica ampliada del curso, el proyecto mantiene dos documentos sincronizados: \textbf{\texttt{paper\_ieee.pdf}} (8 páginas en doble columna \texttt{IEEEtran}) y \textbf{\texttt{main.pdf}} (este informe ampliado). La Tabla siguiente resume la organización de capítulos de este documento:
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{4.8cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Bloque} & \textbf{Secciones incluidas} & \textbf{Propósito principal} \\ \midrule
+I. Marco y Datos & Secciones 1, 2 y 3 & Formulación del problema, trabajos relacionados y análisis descriptivo de HAM10000. \\
+II. Diseño y Auditoría & Secciones 4, 5, 6 y 7 & Fundamentos CNN, arquitecturas, control de fugas (\texttt{split.csv}) y preprocesamiento. \\
+III. Protocolo GPU & Secciones 8, 9, 10, 11 y 12 & Entorno CUDA, entrenamiento reanudable, métricas, robustez y respaldo en Google Colab. \\
+IV. Resultados y Cierre & Secciones 13, 14, 15 y 16 & 13: Resultados verificados; 14: Discusión y limitaciones; 15: Conclusiones; 16: Recomendaciones y trabajo futuro. \\
+V. Referencias y Anexos & Referencias bibliográficas y Apéndices A--B & Referencias bibliográficas en hoja aparte; Apéndice A (reproducción y contratos) y Apéndice B (trazabilidad y glosario). \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% ==============================================================================
+% HOJA DEDICADA AL ÍNDICE GENERAL (COMPACTO)
+% ==============================================================================
+\clearpage
+{\setlength{\parskip}{0pt}%
+\tableofcontents}
+
+% ==============================================================================
+% HOJAS DEDICADAS A ÍNDICE DE FIGURAS E ÍNDICE DE TABLAS
+% ==============================================================================
+\clearpage
+{\setlength{\parskip}{0pt}%
+\listoffigures}
+
+\clearpage
+{\setlength{\parskip}{0pt}%
+\listoftables}
+
+\clearpage
+\pagenumbering{arabic}
+
+\input{secciones/01_introduccion}
+\input{secciones/01b_trabajos_relacionados}
+\input{secciones/02_dataset}
+\input{secciones/03_fundamentos}
+\input{secciones/04_arquitecturas}
+\input{secciones/05_auditoria_split}
+\input{secciones/06_preprocesamiento}
+\input{secciones/07_entorno}
+\input{secciones/08_entrenamiento}
+\input{secciones/09_evaluacion}
+\input{secciones/10_robustez}
+\input{secciones/11_colab}
+\input{secciones/12_resultados}
+\input{secciones/13_discusion}
+\input{secciones/13b_conclusiones}
+\input{secciones/13c_recomendaciones}
+
+\FloatBarrier
+\clearpage
+\renewcommand{\refname}{Referencias bibliográficas}
+\phantomsection
+\addcontentsline{toc}{section}{Referencias bibliográficas}
+\bibliographystyle{IEEEtran}
+\bibliography{referencias}
+
+\clearpage
+\appendix
+\addtocontents{toc}{\protect\addvspace{6pt}\protect\renewcommand{\protect\cftsecpresnum}{Apéndice~}\protect\setlength{\protect\cftsecnumwidth}{6.4em}}
+\input{secciones/14_reproduccion}
+\clearpage
+\input{secciones/15_trazabilidad}
+
+\end{document}

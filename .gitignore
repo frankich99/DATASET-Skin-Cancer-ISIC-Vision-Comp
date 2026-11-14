@@ -1,0 +1,56 @@
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Byte-compiled / optimized / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb_checkpoints/
+
+# Raw and exported datasets (large images)
+descargaDataSet/HAM10000/
+descargaDataSet/*.zip
+descargaDataSet/*.part
+proyecto_ham10000/data/raw/
+proyecto_ham10000/data/processed/train/
+proyecto_ham10000/data/processed/val/
+proyecto_ham10000/data/processed/test/
+
+# Model weights and checkpoints (large binary files)
+*.pt
+*.pth
+*.onnx
+*.bin
+proyecto_ham10000/runs/*
+!proyecto_ham10000/runs/.gitkeep
+
+# Temporary / verification files
+*.tmp
+*.copiando
+evidencias_notebook_*.zip
+resultados_notebook/
+proyecto_ham10000_colab.zip
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.toc
+*.lof
+*.lot
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.nav
+*.snm
+*.vrb
+*.synctex.gz
+
+# Editor and temporary directories
+.vscode/
+.idea/
+.playwright-mcp/

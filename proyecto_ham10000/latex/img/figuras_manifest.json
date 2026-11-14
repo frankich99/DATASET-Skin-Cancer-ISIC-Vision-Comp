@@ -1,0 +1,23 @@
+{
+  "source_split": "F:\\unsaac\\vision\\Article -DATASET\\proyecto_ham10000\\data\\processed\\split.csv",
+  "images": 10015,
+  "classes": {
+    "nv": 6705,
+    "mel": 1113,
+    "bkl": 1099,
+    "df": 115,
+    "akiec": 327,
+    "bcc": 514,
+    "vasc": 142
+  },
+  "selected_train_examples": {
+    "akiec": "ISIC_0024329",
+    "bcc": "ISIC_0024332",
+    "bkl": "ISIC_0024324",
+    "df": "ISIC_0024318",
+    "mel": "ISIC_0024313",
+    "nv": "ISIC_0024306",
+    "vasc": "ISIC_0024370"
+  },
+  "note": "Figuras descriptivas reales; sin curvas ni métricas de entrenamiento inventadas."
+}

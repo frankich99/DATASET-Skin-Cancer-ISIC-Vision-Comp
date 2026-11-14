@@ -1,0 +1,85 @@
+\FloatBarrier\section{Guía operativa de reproducción y contratos de código}
+
+\subsection{Comandos locales principales}
+Desde el directorio \texttt{proyecto\_ham10000}, utilizando el entorno GPU aislado \texttt{..\textbackslash.venv}:
+
+\begin{lstlisting}[language=bash,caption={Validación, exportación de carpetas y entrenamiento base.}]
+..\.venv\Scripts\python.exe python\ejecutar.py validar --datos ..\descargaDataSet\HAM10000 --split data\processed\split.csv
+..\.venv\Scripts\python.exe python\ejecutar.py exportar --datos ..\descargaDataSet\HAM10000 --split data\processed\split.csv --salida data\processed
+..\.venv\Scripts\python.exe python\ejecutar.py entrenar --modelo resnet18 --datos ..\descargaDataSet\HAM10000 --split data\processed\split.csv --config configs\base.json --salida runs
+\end{lstlisting}
+
+Repetir el comando de entrenamiento con \texttt{efficientnet\_b0} y \texttt{mobilenet\_v3\_small}, añadiendo \texttt{-{}-resume} en caso de reanudación tras una interrupción.
+
+\subsection{Evaluación protegida y consolidación}
+\begin{lstlisting}[language=bash,caption={Evaluación en test congelado, mitigación espacial, comparación y compilación.}]
+..\.venv\Scripts\python.exe python\ejecutar.py evaluar --checkpoint runs\resnet18_seed42\best.pt --datos ..\descargaDataSet\HAM10000 --split data\processed\split.csv --salida runs\resnet18_seed42\evaluacion --particion test --confirmar-test --condicion clean
+..\.venv\Scripts\python.exe python\ejecutar.py evaluar --checkpoint runs\resnet18_seed42\best.pt --datos ..\descargaDataSet\HAM10000 --split data\processed\split.csv --salida runs\resnet18_seed42\evaluacion --particion test --confirmar-test --condicion noise_005 --mitigacion median_3
+..\.venv\Scripts\python.exe python\ejecutar.py comparar --runs runs --salida resultados
+..\.venv\Scripts\python.exe latex\compilar.py
+\end{lstlisting}
+
+Las cinco condiciones base usan \texttt{-{}-mitigacion none} (guardando en \texttt{\{split\}\_\allowbreak\{condicion\}}), mientras que \texttt{median\_3} y \texttt{gaussian\_1} guardan en \texttt{\{split\}\_\allowbreak\{condicion\}\_\allowbreak\{mitigacion\}} sin sobrescribir las corridas base. Al ejecutar \texttt{comparar}, se consolidan \texttt{comparacion.csv}, \texttt{curvas\_*.png}, \texttt{confusion\_*.png}, curvas ROC OVR (\texttt{roc\_*.png}, \texttt{roc\_\allowbreak comparativa\_*.png}), \texttt{comparacion\_\allowbreak metricas.png} y \texttt{comparacion\_\allowbreak robustez.png}.
+
+Para evaluar en CPU un checkpoint CUDA sin editarlo se añaden \texttt{-{}-device cpu -{}-num-workers 0} y una salida independiente. La consolidación admite \texttt{-{}-subcarpeta-evaluacion evaluacion} para no mezclar mediciones alternativas; rechaza duplicados y entornos de inferencia incompatibles. El notebook deja entrenamiento, evaluación, figuras y exportación desactivados por defecto, y escribe salidas nuevas en \texttt{resultados\_notebook/}. No sustituye automáticamente cifras ni figuras del informe.
+
+\subsection{Arquitectura modular del paquete \texttt{python/ham10000}}
+Para evitar divergencias entre ejecución local y nube, toda la lógica de datos, modelos, entrenamiento, métricas y gráficos reside en un único paquete modular invocado desde \texttt{ejecutar.py} (Tabla~\ref{tab:modulos}).
+
+\begin{table}[htbp]\centering\small
+\caption{Organización modular y responsabilidad de cada archivo en \texttt{python/}.}
+\label{tab:modulos}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily}p{4.3cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{\textrm{Módulo}} & \textbf{Responsabilidad técnica verificada} \\ \midrule
+ejecutar.py & Interfaz CLI unificada (\texttt{preparar}, \texttt{validar}, \texttt{exportar}, \texttt{entrenar}, \texttt{evaluar}, \texttt{figuras}, \texttt{comparar}). \\
+ham10000/\_\_init\_\_.py & Define constantes canónicas de 7 clases (\texttt{CLASES}) y 3 arquitecturas (\texttt{MODELOS}). \\
+ham10000/io.py & Lectura UTF-8 BOM-safe, escritura atómica de CSV/JSON y cálculo de \texttt{sha256}. \\
+ham10000/prepare.py & Auditoría, agrupación \textit{Union-Find}, \texttt{StratifiedGroupKFold(20)}, exportación y verificación de fugas. \\
+ham10000/data.py & \textit{Letterbox} $224\times224$, aumento determinista en \texttt{train}, normalización ImageNet, perturbaciones y mitigación espacial. \\
+ham10000/models.py & Carga de pesos \texttt{IMAGENET1K\_V1}, reemplazo de cabeza a 7 clases y congelado seguro de \textit{BatchNorm}. \\
+ham10000/metrics.py & Macro Precision/F1, Balanced Accuracy, \texttt{Recall mel}, $\mathrm{AUC}_{\mathrm{OVR}}$, reporte por clase y matriz $7\times7$. \\
+ham10000/engine.py & Entrenamiento en 2 fases, checkpoints/reanudación protegidos, test confirmado, mitigación y evaluación CUDA/CPU sin editar el checkpoint. \\
+ham10000/artifacts.py & Verifica procedencia, muestras y probabilidades antes de reutilizar evaluaciones; detecta archivos incompletos. \\
+ham10000/plots.py & Generación de las 11 figuras descriptivas, consolidación (\texttt{comparacion.csv}), curvas ROC y gráficos comparativos. \\
+../colab/runtime.py & Inicialización local/Colab y extracción segura, integradas en el notebook desde su generador. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\FloatBarrier
+\subsection{Contratos esenciales de implementación}
+Los módulos centrales desacoplan la ingestión de datos, la construcción de arquitecturas y el cálculo de métricas para compartir exactamente la misma lógica entre Windows y Google Colab:
+
+\begin{lstlisting}[language=Python,caption={Adaptación homogénea de las tres arquitecturas y congelamiento seguro de BatchNorm (\texttt{models.py}).}]
+def construir(name, pretrained=True):
+    weights = {
+        "resnet18": models.ResNet18_Weights.IMAGENET1K_V1,
+        "efficientnet_b0": models.EfficientNet_B0_Weights.IMAGENET1K_V1,
+        "mobilenet_v3_small": models.MobileNet_V3_Small_Weights.IMAGENET1K_V1,
+    }
+    model = getattr(models, name)(weights=weights[name] if pretrained else None)
+    if name == "resnet18":
+        model.fc = nn.Linear(model.fc.in_features, len(CLASES))
+    else:
+        model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, len(CLASES))
+    return model, str(weights[name]) if pretrained else "sin_preentrenamiento"
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,caption={Adaptación geométrica isotrópica y perturbación determinista por imagen (\texttt{data.py}).}]
+def letterbox(image, size=224):
+    image = ImageOps.exif_transpose(image).convert("RGB")
+    image = ImageOps.contain(image, (size, size), method=Image.Resampling.BILINEAR)
+    canvas = Image.new("RGB", (size, size), tuple(round(x * 255) for x in MEAN))
+    canvas.paste(image, ((size - image.width) // 2, (size - image.height) // 2))
+    return canvas
+\end{lstlisting}
+
+\subsection{Secuencia sugerida para la exposición de diez minutos}
+\begin{enumerate}[leftmargin=1.6em,itemsep=3pt]
+\item \textbf{Minuto 0--1:} planteamiento de clasificación dermatoscópica en HAM10000 y alcance académico.
+\item \textbf{Minuto 1--3:} desbalance 58.3:1, auditoría SHA-256 y partición fija agrupada por \texttt{lesion\_id}.
+\item \textbf{Minuto 3--5:} diferencias estructurales entre ResNet-18, EfficientNet-B0 y MobileNetV3-Small.
+\item \textbf{Minuto 5--8:} resultados comparativos reales, matrices de confusión, sensibilidad de melanoma, robustez y eficiencia.
+\item \textbf{Minuto 8--10:} limitaciones, conclusiones y preguntas.
+\end{enumerate}

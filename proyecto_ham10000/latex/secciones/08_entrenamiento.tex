@@ -1,0 +1,55 @@
+\FloatBarrier\section{Protocolo de entrenamiento y reanudación}
+
+\subsection{Configuración base}
+La configuración se conserva centralizada en \texttt{configs/base.json} para evitar hiperparámetros dispersos. El punto de partida común utiliza entrada $224\times224$, tamaño de lote 8 y un máximo de veinte épocas: dos para adaptar la cabeza clasificadora y hasta dieciocho de ajuste fino. La semilla inicial es 42.
+
+\begin{table}[htbp]\centering\small
+\caption{Configuración experimental compartida para las tres CNN (\texttt{configs/base.json}).}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Parámetro} & \textbf{Valor configurado} & \textbf{Propósito metodológico} \\ \midrule
+Entrada & RGB, $224\times224$ (\textit{letterbox}) & Preservar relación de aspecto sin recortar periferia. \\
+Tamaño de lote (\texttt{batch\_size}) & 8 (piloto local) & Viable en 4~GiB de VRAM con margen térmico seguro. \\
+Trabajadores (\texttt{num\_workers}) & 4 (Windows, piloto puntual) & Acelera lectura casi $2\times$; equivalencia bit-exacta comprobada en sesión. \\
+Épocas máximas & 20 (2 cabeza + hasta 18 ajuste) & Estabilizar la nueva cabeza antes del ajuste fino global. \\
+Optimizador & AdamW (\texttt{weight\_decay} $10^{-4}$) & Regularización desacoplada homogénea entre redes. \\
+Tasas de aprendizaje & Cabeza $10^{-4}$ / base $10^{-5}$ & Decaimiento coseno con menor tasa en pesos ImageNet. \\
+Criterio de selección & Macro F1 en \texttt{val} & Priorizar desempeño equilibrado frente al desbalance. \\
+Parada temprana & Paciencia de 5 épocas sin mejora & Evitar sobreajuste y cómputo innecesario. \\
+Precisión y gradiente & FP32 (\texttt{amp: false}), clip $L_2\le 1.0$ & Estabilidad numérica comparable sin escalado mixto. \\
+Semilla y determinismo & 42 + \texttt{CUBLAS\_WORKSPACE\_CONFIG} & Reproducibilidad de aumentos, lotes e inicialización. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Adaptación de cabeza y ajuste fino}
+En la primera etapa (épocas 1 y 2) se congelan los parámetros del extractor y se entrenan únicamente los de la cabeza de clasificación. Las estadísticas internas de \textit{BatchNorm} del extractor se fijan explícitamente en modo evaluación (\texttt{eval()}) mediante \texttt{congelar\_backbone}. Posteriormente, desde la época 3 se habilitan todos los parámetros y se aplican tasas diferenciadas con planificador de decaimiento coseno por época. La versión exacta de los pesos y del entorno quedan registradas en \texttt{run.json}.
+
+\subsection{Desbalance y función objetivo}
+La pérdida principal es entropía cruzada con pesos de clase calculados exclusivamente sobre \texttt{train}:
+\begin{equation}
+w_c=\frac{N_{\mathrm{train}}}{K\,n_c},\qquad K=7,\quad N_{\mathrm{train}}=7\,009.
+\end{equation}
+La ponderación aumenta la contribución de clases escasas (como \texttt{df} con $w_{\mathrm{df}}=12.5161$ y \texttt{vasc} con $w_{\mathrm{vasc}}=10.0129$) frente a \texttt{nv} ($w_{\mathrm{nv}}=0.2133$), sin añadir simultáneamente sobremuestreo sintético en disco. En \texttt{engine.py}, el criterio se instancia como \texttt{CrossEntropyLoss(weight=...)} con reducción \texttt{mean} por defecto de PyTorch; en consecuencia, para un lote de tamaño $B$, la pérdida normalizada por lote emplea como denominador la suma de pesos de sus muestras:
+\begin{equation}
+\mathcal{L}_{\mathrm{batch}} = \frac{\sum_{i=1}^{B} w_{y_i}\,\ell_{\mathrm{CE}}(z_i, y_i)}{\sum_{i=1}^{B} w_{y_i}},
+\end{equation}
+donde $\ell_{\mathrm{CE}}(z_i, y_i) = -\log p_{i,y_i}$. El campo \texttt{train\_loss} en \texttt{history.csv} registra el promedio por época de dichas medias por lote ($\frac{1}{M}\sum_{m=1}^{M}\mathcal{L}_{\mathrm{batch},m}$ sobre los $M$ lotes de entrenamiento). Por su parte, \texttt{val\_loss} corresponde a entropía cruzada sin ponderar sobre el conjunto completo de validación, mientras el criterio principal de selección permanece Macro F1 en \texttt{val}.
+
+\subsection{Memoria, precisión, checkpoints y reanudación}
+Se entrena una arquitectura a la vez utilizando \texttt{num\_workers=4} en Windows (\texttt{configs/base.json}) y \texttt{2} en Google Colab. En una comprobación puntual de sesión previa sobre Windows (sin script ni reporte independiente persistido en el repositorio) se verificó equivalencia bit-exacta entre \texttt{num\_workers=0} y \texttt{num\_workers=4} (idéntica semilla, secuencia de lotes, pérdidas y pesos finales), logrando reducir casi a la mitad el tiempo por época en la GTX~1650 al evitar cuellos de botella de lectura e iteración en disco. El último lote incompleto de \texttt{train} se descarta (\texttt{drop\_last=True}) para evitar lotes de tamaño 1 en \textit{BatchNorm}; \texttt{val} y \texttt{test} evalúan todas sus muestras íntegramente.
+
+\begin{table}[htbp]\centering\small
+\caption{Artefactos generados durante el entrenamiento y reglas de reanudación segura (\texttt{engine.py}).}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Artefacto} & \textbf{Contenido y función de trazabilidad} \\ \midrule
+\texttt{best.pt} & Pesos del modelo con mayor Macro F1 en \texttt{val}, configuración, \texttt{split\_sha256} e historial. \\
+\texttt{last.pt} & Estado completo de la última época (modelo, AdamW, planificador LR, estados RNG CPU/CUDA). \\
+\texttt{history.csv} & Registro por época con columnas reales: \texttt{epoch}, \texttt{stage}, \texttt{train\_loss}, \texttt{val\_loss}, \texttt{val\_macro\_f1}, \texttt{val\_accuracy}, \texttt{seconds} y \texttt{peak\_allocated\_mib}. \\
+\texttt{run.json} & Metadatos de entorno (GPU, PyTorch, CUDA), semilla, parámetros totales y pesos \texttt{IMAGENET1K\_V1}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Cada época completa escribe de forma atómica (archivo temporal + reemplazo) \texttt{best.pt} y \texttt{last.pt}. Si ocurre una interrupción, la bandera \texttt{-{}-resume} reanuda desde la última época completa, rechazando automáticamente cualquier checkpoint cuya configuración o huella \texttt{split\_sha256} no coincidan exactamente.

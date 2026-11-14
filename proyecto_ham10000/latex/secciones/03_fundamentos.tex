@@ -1,0 +1,49 @@
+\FloatBarrier\section{Fundamentos de CNN y transferencia de aprendizaje}
+
+\subsection{Qué aprende una red convolucional}
+Una CNN es una red neuronal diseñada para procesar datos con estructura espacial. Sus filtros se aplican sobre regiones locales y comparten parámetros a lo largo de la imagen. Esta operación permite detectar patrones sin asignar un conjunto independiente de pesos a cada posición. En capas iniciales pueden aparecer respuestas a bordes, contrastes y texturas; las capas posteriores combinan esas respuestas. Esa descripción es una interpretación funcional, no una garantía de que cada filtro aprenda una característica clínica identificable \cite{goodfellow2016}.
+
+\begin{tcolorbox}[teoriaBox,title={Operación de convolución discreta y proyección multiclase}]
+Una convolución espacial bidimensional sobre canales de entrada se formula como:
+\begin{equation}
+z_{i,j,k}=b_k+\sum_{u,v,c}W_{u,v,c,k}\,x_{i+u,j+v,c}.
+\end{equation}
+Tras la agregación global espacial, la cabeza lineal produce siete logits $(z_1,\dots,z_7)$ convertidos mediante \textit{softmax}:
+\begin{equation}
+p_k=\frac{\exp(z_k)}{\sum_{j=1}^{7}\exp(z_j)},\qquad k \in \{1,\dots,7\}.
+\end{equation}
+\end{tcolorbox}
+
+Los pesos $W$ y sesgos $b$ se ajustan mediante aprendizaje. No se programan manualmente reglas como ``si el borde es irregular entonces melanoma''. Una red puede descubrir correlaciones útiles, pero también atajos espurios. Por eso son esenciales la separación de datos, la revisión de errores y la evaluación fuera de las condiciones de entrenamiento.
+
+\subsection{Del tensor a una distribución de clases}
+Cada imagen RGB se representa con tres canales y resolución $224\times224$. La clase predicha se obtiene mediante el argumento máximo de las salidas normalizadas por \textit{softmax}. Estos valores no deben denominarse automáticamente probabilidades clínicas calibradas: una red puede ser demasiado confiada y su calibración requiere una evaluación específica. El reporte guardará las siete salidas por imagen en \texttt{predictions.csv} para permitir auditoría posterior, no solo una etiqueta ganadora.
+
+\subsection{Pérdida, gradiente y actualización}
+La entropía cruzada penaliza asignar baja probabilidad a la etiqueta observada. La retropropagación calcula derivadas de la pérdida respecto a los parámetros y el optimizador actualiza los pesos. Una época recorre los lotes del conjunto de entrenamiento; no equivale a una única imagen ni a una ejecución completa del proyecto. El tamaño de lote afecta consumo de memoria y comportamiento de optimización, por lo que debe registrarse.
+
+La pérdida de entrenamiento no es la métrica de prueba. Puede bajar mientras el error en datos no vistos aumenta, fenómeno asociado a sobreajuste. La validación permite detectar ese comportamiento sin utilizar el test como guía. Mirar \texttt{test} repetidamente para escoger una arquitectura o un hiperparámetro transforma indirectamente \texttt{test} en parte del ajuste.
+
+\subsection{Por qué transferencia de aprendizaje}
+En lugar de iniciar todos los pesos al azar, se parte de modelos entrenados con ImageNet (\texttt{IMAGENET1K\_V1}). Se sustituye la cabeza original por una salida de siete clases y después se adaptan las representaciones al dominio dermatoscópico. Esta estrategia reduce la necesidad de aprender toda la estructura visual desde una colección relativamente pequeña, aunque no elimina la diferencia entre imágenes naturales y médicas \cite{pan2010}.
+
+El protocolo distingue dos etapas: adaptación inicial de la cabeza y ajuste fino con una tasa menor para el extractor. Congelar un parámetro significa impedir su actualización por gradiente. Además, durante esa etapa deben controlarse los estados de \textit{BatchNorm}; congelar únicamente los pesos no impide que sus estadísticas internas cambien si el módulo permanece en modo de entrenamiento.
+
+\begin{table}[htbp]\centering\small
+\caption{Resumen del flujo tensorial y reglas operativas entre etapas del entrenamiento.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Fase / Módulo} & \textbf{Representación} & \textbf{Comportamiento controlado en código} \\ \midrule
+Entrada por lote & Tensor $(B, 3, 224, 224)$ & Normalización ImageNet; en \texttt{train} se descarta último lote incompleto (\texttt{drop\_last=True}). \\
+Extractor (\textit{backbone}) & Mapas espaciales + \textit{pooling} & Congelado en épocas 1--2 con \textit{BatchNorm} fijado en \texttt{eval()}; activo en ajuste fino ($\mathrm{lr}=10^{-5}$). \\
+Cabeza clasificadora & Vector $(B, d) \to (B, 7)$ & Entrenable desde época 1 ($\mathrm{lr}=10^{-4}$); proyección lineal a las siete categorías. \\
+Modo entrenamiento & \texttt{model.train()} selectivo & Gradientes habilitados en capas activas y recorte de norma $L_2 \le 1.0$. \\
+Modo evaluación & \texttt{model.eval()} + \texttt{no\_grad} & Congela estadísticas de \textit{BatchNorm} y desactiva \textit{Dropout} en \texttt{val} y \texttt{test}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Entrenamiento y evaluación son modos distintos}
+\textit{Dropout} y \textit{BatchNorm} se comportan de manera diferente al entrenar y al inferir. La evaluación debe establecer el modo correspondiente y desactivar el cálculo de gradientes. De lo contrario, una comparación puede resultar inestable o consumir memoria innecesaria. Estas reglas están implementadas en funciones compartidas para evitar diferencias accidentales entre laptop y Colab \cite{pytorch2019,torchvisiondocs}.
+
+Los tres modelos elegidos son CNN, pero no son tres ejecuciones del mismo modelo: cambian sus bloques, conexiones y asignación de capacidad. Compararlos es una comparación válida de arquitecturas profundas para una misma tarea. Cambiar únicamente la semilla produciría repeticiones experimentales, no una arquitectura nueva.

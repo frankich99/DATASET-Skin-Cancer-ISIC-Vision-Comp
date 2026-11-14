@@ -1,0 +1,46 @@
+\FloatBarrier\section{Problema, objetivos y diseño del estudio}
+
+\subsection{Motivación}
+La clasificación automática de lesiones cutáneas constituye un problema de reconocimiento de patrones donde el color, la textura, la geometría y el contexto de adquisición pueden aportar información. La dermatoscopia permite observar estructuras que no se presentan del mismo modo en una fotografía convencional. Por ello, un modelo entrenado con imágenes dermatoscópicas no debe describirse como una solución general para cualquier fotografía de piel ni utilizarse como sustituto de evaluación profesional.
+
+El interés académico de HAM10000 reside tanto en su tamaño como en sus dificultades: categorías visualmente próximas, desbalance entre diagnósticos, diversidad de dispositivos y varias tomas de una misma lesión. Estas características permiten estudiar por qué una cifra elevada de exactitud global no basta para valorar un clasificador médico. También permiten mostrar cómo una división incorrecta de los datos puede producir conclusiones demasiado optimistas \cite{tschandl2018}.
+
+El problema del proyecto se formula como una clasificación multiclase de etiqueta única: dada una imagen, asignar una de las siete categorías presentes en los metadatos. No se pretende localizar una lesión con una caja ni delinear su contorno. Por tanto, la selección de modelos debe corresponder a clasificación y no a detección o segmentación. Compartir el término general de visión computacional no vuelve intercambiables las anotaciones ni los objetivos de esas tareas.
+
+\subsection{Objetivo general}
+Desarrollar y documentar una evaluación comparativa reproducible de ResNet-18, EfficientNet-B0 y MobileNetV3-Small para la clasificación de lesiones cutáneas pigmentadas mediante dermatoscopia (HAM10000), evaluando calidad predictiva, robustez y eficiencia bajo un protocolo común, compatible con recursos limitados y con ejecución complementaria en Colab.
+
+\subsection{Objetivos específicos}
+\begin{enumerate}[leftmargin=1.6em,itemsep=3pt]
+\item Auditar imágenes y etiquetas; identificar dependencias entre muestras y preservar los originales.
+\item Construir una partición fija agrupada por lesión y duplicados binarios, con presencia de las siete clases en los tres subconjuntos.
+\item Implementar transformaciones RGB y entrenamiento con transferencia de aprendizaje, evitando usar validación o prueba para calcular ajustes de entrenamiento.
+\item Obtener métricas globales y por clase, además de mediciones de costo e inferencia en condiciones comparables.
+\item Estudiar degradación por ruido y desenfoque mediante condiciones definidas antes de la prueba final.
+\item Mantener artefactos que permitan reconstruir el experimento: configuración, split, pesos, versiones, predicciones e historiales.
+\end{enumerate}
+
+\subsection{Pregunta de investigación, hipótesis y formulación del problema}
+La pregunta central es si una arquitectura compacta puede mantener un desempeño por clase competitivo frente a una referencia residual, reduciendo costo en el equipo disponible. La expectativa de que EfficientNet-B0 o MobileNetV3-Small puedan ofrecer ventajas de eficiencia es una hipótesis de trabajo, no un resultado. Los artículos originales motivan el diseño de los modelos, pero sus mediciones sobre ImageNet o procesadores móviles no predicen automáticamente el resultado en esta laptop \cite{he2016,tan2019,howard2019}.
+
+\begin{table}[htbp]\centering\small
+\caption{Ficha técnica de formulación y alcance experimental del estudio.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Componente del estudio} & \textbf{Especificación adoptada} \\ \midrule
+Formulación de la tarea & Clasificación supervisada multiclase de etiqueta única (7 diagnósticos). \\
+Entrada al modelo & Imagen dermatoscópica RGB adaptada isotrópicamente a $224\times224$ px. \\
+Salida del modelo & Vector de 7 logits transformado a probabilidades vía \textit{softmax}. \\
+Métrica primaria de decisión & Macro F1 en \texttt{val}, acompañada de \texttt{Recall mel}, Bal.\ Acc.\ y $\mathrm{AUC}_{\mathrm{OVR}}$. \\
+Control antifuga & Agrupamiento por \texttt{lesion\_id} + huella SHA-256 mediante \texttt{StratifiedGroupKFold(20)}. \\
+Presupuesto común & Misma configuración (\texttt{configs/base.json}), semilla 42 y hasta 20 épocas. \\
+Restricción de hardware & GPU local GTX 1650 (4~GiB VRAM) con respaldo en Google Colab GPU. \\
+Alcance excluido del proyecto & Despliegue web/móvil (excluido por indicación docente) y diagnóstico clínico real. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Relación con los requerimientos docentes}
+La transcripción del curso solicita comparar al menos tres algoritmos, calcular métricas, elaborar un informe y exponer durante diez minutos. La guía escrita enfatiza modelos de aprendizaje profundo y un flujo reproducible. Seleccionar exactamente tres CNN distintas satisface el núcleo común de ambos materiales. Las capturas sobre SLIC, Watershed o cortes de grafos describen segmentación clásica y no se convierten aquí en una exigencia de mezclar tareas. El despliegue interactivo quedó explícitamente excluido del alcance por indicación docente; únicamente resta confirmar con el docente la fecha de la exposición final.
+
+\figura{10_pipeline.png}{1.0}{Flujo experimental unificado del estudio. El split se fija antes del entrenamiento y es común a las tres arquitecturas. Elaboración propia.}

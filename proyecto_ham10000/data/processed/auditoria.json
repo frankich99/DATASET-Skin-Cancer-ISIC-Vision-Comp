@@ -1,0 +1,58 @@
+{
+  "images": 10015,
+  "lesions": 7470,
+  "groups": 7470,
+  "classes": {
+    "nv": 6705,
+    "mel": 1113,
+    "bkl": 1099,
+    "df": 115,
+    "akiec": 327,
+    "bcc": 514,
+    "vasc": 142
+  },
+  "lesions_by_class": {
+    "akiec": 228,
+    "bcc": 327,
+    "bkl": 727,
+    "df": 73,
+    "mel": 614,
+    "nv": 5403,
+    "vasc": 98
+  },
+  "split_counts": {
+    "train": {
+      "nv": 4694,
+      "mel": 779,
+      "df": 80,
+      "bkl": 769,
+      "akiec": 228,
+      "bcc": 359,
+      "vasc": 100
+    },
+    "val": {
+      "mel": 166,
+      "nv": 1006,
+      "bkl": 165,
+      "bcc": 77,
+      "df": 18,
+      "akiec": 50,
+      "vasc": 21
+    },
+    "test": {
+      "mel": 168,
+      "nv": 1005,
+      "bkl": 165,
+      "bcc": 78,
+      "akiec": 49,
+      "vasc": 21,
+      "df": 17
+    }
+  },
+  "exact_duplicate_excess": 2,
+  "split_sha256": "583779fb75f28758f49b555898d1a7b50fc466574e63dc207c61e644f944ba39",
+  "dataset_sha256": "c326c2bf4c37f9497dc4cac7ae9a98b712e8b30d70754374a2bc5e3ff2f2015a",
+  "seed": 42,
+  "method": "StratifiedGroupKFold(20); folds 0:3 test, 3:6 val, 6:20 train",
+  "limitations": "Agrupamiento por lesión y duplicados binarios, no por paciente. Similitud perceptual no auditada exhaustivamente."
+}

@@ -1,0 +1,43 @@
+\FloatBarrier\section{Preprocesamiento y aumento de datos}
+
+\subsection{Un pipeline compartido}
+El preprocesamiento establece cómo una fotografía se convierte en el tensor de entrada de la red. La misma función base se reutiliza en entrenamiento, validación y prueba para evitar discrepancias entre fases. El aumento aleatorio se añade exclusivamente a \texttt{train}. No se exportan imágenes aumentadas antes de separar las muestras: hacerlo podría introducir versiones de una misma imagen en conjuntos distintos.
+
+La implementación utiliza Pillow para lectura y conversión a RGB. Se atiende la orientación EXIF si está disponible y se mantienen tres canales. El orden de canales debe ser explícito; cargar una imagen BGR y tratarla como RGB alteraría los colores sin necesariamente producir un error de ejecución.
+
+\subsection{Geometría sin deformar la lesión}
+La entrada común es de $224\times224$ píxeles. Se redimensiona conservando la proporción (\textit{letterbox} bilineal) y se centra la imagen sobre un lienzo cuadrado. Esta operación evita estirar de forma distinta los ejes y, a diferencia de un recorte central, no elimina deliberadamente la periferia para obtener el cuadrado. El relleno usa un color asociado a la media de normalización de ImageNet.
+
+\figura{08_preprocesamiento.png}{1.0}{Ejemplo real de \texttt{train}: original ($600\times450$), adaptación geométrica (\textit{letterbox} $224\times224$) y aumento determinista. La normalización se deshace únicamente para visualizar el tercer panel.}
+
+\subsection{Escalado y normalización}
+Los valores se transforman a un tensor flotante y se escalan al rango $[0,1]$. Después se normalizan por canal:
+\begin{equation}
+x'_c=\frac{x_c-\mu_c}{\sigma_c},\qquad
+\mu=(0.485,0.456,0.406),\quad
+\sigma=(0.229,0.224,0.225).
+\end{equation}
+Estos valores corresponden al esquema de normalización de los pesos ImageNet seleccionados. De manera complementaria, el archivo \texttt{estadisticas.json} registra las estadísticas empíricas calculadas estrictamente sobre los 7\,009 ejemplos de entrenamiento ($\mu_{\mathrm{train}}=[0.693823, 0.523161, 0.529890]$, $\sigma_{\mathrm{train}}=[0.170584, 0.136846, 0.162109]$) \cite{torchvisiondocs}.
+
+\subsection{Aumento moderado y política reproducible}
+Se permiten volteos horizontal y vertical ($p=0.5$), rotación de hasta $\pm 30^\circ$ y cambios moderados de brillo y contraste entre $0.9$ y $1.1$. El propósito es reducir dependencia de variaciones de adquisición sin borrar características clínicas relevantes. El estado aleatorio del aumento se deriva mediante SHA-256 de la semilla, la época y el identificador de imagen, asegurando que las arquitecturas compitan bajo exactamente la misma secuencia de aumentos.
+
+\begin{table}[htbp]\centering\small
+\caption{Especificación exacta de transformaciones por partición implementada en \texttt{data.py}.}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedright\arraybackslash}p{4.1cm}cc>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Operación} & \textbf{\texttt{train}} & \textbf{\texttt{val / test}} & \textbf{Parámetros e implementación} \\ \midrule
+Lectura y orientación & Sí & Sí & Apertura desde JPEG original vía \texttt{ImageOps.exif\_transpose} en RGB. \\
+Adaptación geométrica & Sí & Sí & \textit{Letterbox} bilineal isotrópico a $224\times224$ con relleno media ImageNet. \\
+Volteo horizontal / vertical & Sí & No & Probabilidad $p=0.5$ independiente por eje con generador determinista. \\
+Rotación aleatoria & Sí & No & Ángulo uniforme en $[-30^\circ, +30^\circ]$, interpolación bilineal y relleno media. \\
+Brillo y contraste & Sí & No & Factores independientes uniformes en $[0.9, 1.1]$. \\
+Perturbación de robustez & No & Configurable & Solo en evaluación (\texttt{clean}, \texttt{noise\_002/005}, \texttt{blur\_1/2}). \\
+Normalización de tensor & Sí & Sí & Conversión a $[0,1]$ y estandarización ImageNet ($\mu,\sigma$). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Qué no se aplica por defecto}
+La eliminación de vello, CLAHE y filtros de suavizado no se consideran mejoras universales: pueden reducir artefactos, pero también alterar bordes o pigmentación. Si se evalúa alguna variante, sus parámetros deberán seleccionarse en validación y aplicarse por igual a todos los modelos.
+\FloatBarrier

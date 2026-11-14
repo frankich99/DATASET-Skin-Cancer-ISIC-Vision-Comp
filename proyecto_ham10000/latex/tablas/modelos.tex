@@ -1,0 +1,9 @@
+\begin{table}[htbp]\centering\small
+\setlength{\tabcolsep}{6pt}
+\caption{Especificación técnica y parámetros exactos de las tres CNN adaptadas a siete clases (VRAM sintética con batch 2 a $224\times 224$).}
+\begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}Xlrr}\toprule
+\textbf{Arquitectura} & \textbf{Mecanismo central} & \textbf{Pesos base} & \textbf{Parámetros} & \textbf{VRAM sintética} \\ \midrule
+\textbf{ResNet-18} & Bloques residuales $3\times 3$ & \texttt{IMAGENET1K\_V1} & 11\,180\,103 & 147 MiB \\
+\textbf{EfficientNet-B0} & MBConv + Squeeze-and-Excitation & \texttt{IMAGENET1K\_V1} & 4\,016\,515 & 208 MiB \\
+\textbf{MobileNetV3-Small} & Depthwise separable + SE + h-swish & \texttt{IMAGENET1K\_V1} & 1\,525\,031 & 58 MiB \\
+\bottomrule\end{tabularx}\end{table}
